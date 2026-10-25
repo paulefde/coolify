@@ -21,6 +21,7 @@ use App\Models\StandaloneDocker;
 use App\Models\SwarmDocker;
 use App\Notifications\Application\DeploymentFailed;
 use App\Notifications\Application\DeploymentSuccess;
+use App\Support\BuildTimeHosts;
 use App\Support\RemoteSecretReferences;
 use App\Support\RemoteSecretValueFormatter;
 use App\Support\ValidationPatterns;
@@ -317,6 +318,16 @@ class ApplicationDeploymentJob implements ShouldBeEncrypted, ShouldQueue
      */
     private function addHostFlags(Collection $containers): string
     {
+        $mode = $this->application->settings->build_hosts_mode ?? 'all';
+        if (! in_array($mode, ['all', 'none', 'list'], true)) {
+            throw new \InvalidArgumentException('Invalid build-time hosts mode.');
+        }
+        if ($mode === 'none') {
+            return '';
+        }
+        $requiredHosts = $mode === 'list'
+            ? BuildTimeHosts::normalize($this->application->settings->build_hosts ?? [])
+            : [];
         $containers = $containers->sort()->values();
         $buildHelperNames = ApplicationDeploymentQueue::query()
             ->whereIn('deployment_uuid', $containers->pluck('Name')->filter())
@@ -338,6 +349,15 @@ class ApplicationDeploymentJob implements ShouldBeEncrypted, ShouldQueue
             if ($containerName && $containerIp) {
                 $ips->put($containerName, str($containerIp)->before('/')->value());
             }
+        }
+
+        if ($mode === 'list') {
+            foreach ($requiredHosts as $name) {
+                if (! $ips->has($name)) {
+                    throw new \RuntimeException("Required build-time host is unavailable: $name");
+                }
+            }
+            $ips = $ips->only($requiredHosts)->sortKeys();
         }
 
         return $ips->map(function ($ip, $name) {

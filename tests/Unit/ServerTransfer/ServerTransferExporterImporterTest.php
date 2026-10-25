@@ -1130,8 +1130,8 @@ test('secret manager links of applications and databases move with their integra
         ->and($database->secretManagerLink->settings)->toBe(['mount' => 'kv', 'path' => 'db']);
 });
 
-test('transfer keeps the Traefik certificate resolver of applications and service applications', function () {
-    $this->application->settings->update(['traefik_certificate_resolver' => 'none']);
+test('transfer keeps the build host policy and Traefik certificate resolvers', function () {
+    $this->application->settings->update(['traefik_certificate_resolver' => 'none', 'build_hosts_mode' => 'list', 'build_hosts' => ['database']]);
     $serviceApp = new ServiceApplication;
     $serviceApp->forceFill([
         'service_id' => $this->service->id,
@@ -1165,6 +1165,8 @@ test('transfer keeps the Traefik certificate resolver of applications and servic
     $this->importer->import($bundle, teamId: $this->team->id, preserveUuids: true, adoptMode: true);
 
     expect(Application::where('uuid', $originalAppUuid)->firstOrFail()->settings->traefik_certificate_resolver)->toBe('none')
+        ->and(Application::where('uuid', $originalAppUuid)->firstOrFail()->settings->build_hosts_mode)->toBe('list')
+        ->and(Application::where('uuid', $originalAppUuid)->firstOrFail()->settings->build_hosts)->toBe(['database'])
         ->and(ServiceApplication::where('uuid', 'svc-app-resolver')->firstOrFail()->traefik_certificate_resolver)->toBe('cloudflare');
 });
 

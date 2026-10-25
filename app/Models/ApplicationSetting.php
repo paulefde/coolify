@@ -60,6 +60,7 @@ class ApplicationSetting extends Model
     public const MAX_CONTAINER_NAME_PREFIX_LENGTH = 30;
 
     protected $casts = [
+        'build_hosts' => 'array',
         'is_static' => 'boolean',
         'is_spa' => 'boolean',
         'is_build_server_enabled' => 'boolean',
@@ -95,6 +96,8 @@ class ApplicationSetting extends Model
     ];
 
     protected $fillable = [
+        'build_hosts_mode',
+        'build_hosts',
         'application_id',
         'is_static',
         'is_git_submodules_enabled',

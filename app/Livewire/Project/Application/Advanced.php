@@ -6,6 +6,7 @@ use App\Enums\ProxyTypes;
 use App\Models\Application;
 use App\Models\ApplicationSetting;
 use App\Models\ServerSetting;
+use App\Support\BuildTimeHosts;
 use App\Support\ValidationPatterns;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Validator;
@@ -22,6 +23,10 @@ class Advanced extends Component
     private const CONTAINER_NAME_PREFIX_PATTERN = '/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/';
 
     public Application $application;
+
+    public string $buildHostsMode = 'all';
+
+    public string $buildHosts = '';
 
     #[Validate(['boolean'])]
     public bool $isForceHttpsEnabled = false;
@@ -104,6 +109,36 @@ class Advanced extends Component
     {
         try {
             $this->syncData();
+            $this->buildHostsMode = $this->application->settings->build_hosts_mode ?? 'all';
+            $this->buildHosts = implode("\n", $this->application->settings->build_hosts ?? []);
+        } catch (\Throwable $e) {
+            return handleError($e, $this);
+        }
+    }
+
+    public function saveBuildTimeHosts()
+    {
+        try {
+            $this->authorize('update', $this->application);
+            $this->validate([
+                'buildHostsMode' => ['required', Rule::in(['all', 'none', 'list'])],
+                'buildHosts' => ['string', 'max:33000'],
+            ]);
+            try {
+                $hosts = BuildTimeHosts::parse($this->buildHosts);
+            } catch (\InvalidArgumentException $e) {
+                throw ValidationException::withMessages(['buildHosts' => $e->getMessage()]);
+            }
+            $this->application->settings->build_hosts_mode = $this->buildHostsMode;
+            $this->application->settings->build_hosts = $hosts;
+            $changedFields = array_keys($this->application->settings->getDirty());
+            $this->application->settings->save();
+            $this->auditSettingsUpdate($changedFields);
+            $this->buildHosts = implode("\n", $hosts);
+            $this->dispatch('success', 'Build-time hosts saved. Applies to the next build.');
+            $this->dispatch('configurationChanged');
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             return handleError($e, $this);
         }

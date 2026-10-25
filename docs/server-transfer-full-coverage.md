@@ -35,6 +35,7 @@ When you add a model or a setting to the transfer, add it to this file too.
 | ➕ | Terminal | terminal access off |
 | ➕ | Image retention | "disable application image retention" on |
 | ➕ | Labels / Traefik | generate exact labels on, Traefik certificate resolver `custom` |
+| ➕ | Build-time hosts | explicit container list, e.g. `database`; verify the mode and list survive transfer and unavailable hosts fail the next build |
 | ➕ | Backup compression | CPU percentage 50 |
 | ➕ | Metrics / Sentinel | metrics on, refresh rate 10 s, history 14 days, push interval 30 s |
 | ➕ | Traffic analytics | on, top N 20, sample threshold, retention 1h=3 / 1d=60 days, IP mode `anonymized` |

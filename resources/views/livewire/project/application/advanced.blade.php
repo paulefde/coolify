@@ -13,6 +13,21 @@
     <div class="flex flex-col gap-6">
         <x-application.settings-section id="advanced-build-section" title="Build"
             helper="Fine-tune how images are built for this application.">
+            @if ($application->build_pack !== 'dockercompose')
+                <form wire:submit="saveBuildTimeHosts" class="w-full">
+                    <x-unsaved-bar action="saveBuildTimeHosts" />
+                    <x-forms.listbox id="buildHostsMode" label="Build-time hosts"
+                        helper="Choose which destination container names the build can resolve. Changing the host list can invalidate the Docker build cache. Runtime networking is unaffected."
+                        :options="[
+                            ['value' => 'all', 'label' => 'All eligible destination containers (default)'],
+                            ['value' => 'none', 'label' => 'None'],
+                            ['value' => 'list', 'label' => 'Only the specified containers'],
+                        ]" :disabled="! $canUpdate" />
+                    <x-forms.textarea id="buildHosts" label="Specified containers" rows="3"
+                        helper="One exact container name per line or separated by commas. Used only with the specified-containers option. Builds fail if a required container is unavailable."
+                        canGate="update" :canResource="$application" />
+                </form>
+            @endif
             <div class="grid w-full gap-4 sm:grid-cols-2">
                 <x-forms.listbox id="disableBuildCache" label="Build cache" onChange="instantSave"
                     helper="Disabling the cache forces a completely fresh Docker build on every deployment."
